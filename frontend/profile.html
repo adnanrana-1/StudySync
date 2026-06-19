@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - StudySync</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <div class="brand">📚 StudySync</div>
+        <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="browse-partners.html">Browse Partners</a></li>
+            <li><a href="my-sessions.html">My Sessions</a></li>
+            <li><a href="profile.html">Profile</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="grid grid-2">
+            <div class="card">
+                <h2 class="card-header">My Profile</h2>
+                <div id="profileInfo" style="margin-top: 1rem;">
+                    <p style="color: #999;">Loading...</p>
+                </div>
+
+                <div id="editForm" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Edit Profile</h3>
+
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="editName">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Major</label>
+                        <input type="text" id="editMajor">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Year</label>
+                        <select id="editYear">
+                            <option value="1">Year 1</option>
+                            <option value="2">Year 2</option>
+                            <option value="3">Year 3</option>
+                            <option value="4">Year 4</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bio</label>
+                        <textarea id="editBio"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Subjects (comma separated)</label>
+                        <textarea id="editSubjects"></textarea>
+                    </div>
+
+                    <button class="btn btn-success" onclick="saveProfile()" style="width: 100%;">Save Changes</button>
+                </div>
+
+                <button class="btn btn-primary" onclick="toggleEditForm()" id="editBtn" style="width: 100%; margin-top: 1rem;">
+                    Edit Profile
+                </button>
+            </div>
+
+            <div class="card">
+                <h2 class="card-header">Ratings & Reviews</h2>
+                <div id="ratingsInfo" style="margin-top: 1rem;">
+                    <p style="color: #999;">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function checkAuth() {
+            const token = localStorage.getItem('studysync_token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function loadProfile() {
+            const userId = localStorage.getItem('user_id');
+
+            try {
+                const response = await fetch(`${API_URL}/users/profile/${userId}`);
+                const profile = await response.json();
+
+                let profileHtml = `
+                    <p><strong>Name:</strong> ${profile.name}</p>
+                    <p><strong>Email:</strong> ${profile.email}</p>
+                    <p><strong>Major:</strong> ${profile.major}</p>
+                    <p><strong>Year:</strong> ${profile.year}</p>
+                    <p><strong>Bio:</strong> ${profile.bio || 'No bio added'}</p>
+                    <p><strong>Subjects:</strong> ${profile.subjects.join(', ')}</p>
+                    <p><strong>Average Rating:</strong> ⭐ ${profile.average_rating}</p>
+                    <p><strong>Sessions Hosted:</strong> ${profile.total_sessions_hosted}</p>
+                    <p><strong>Sessions Participated:</strong> ${profile.total_sessions_participated}</p>
+                `;
+
+                document.getElementById('profileInfo').innerHTML = profileHtml;
+
+                // Populate edit form
+                document.getElementById('editName').value = profile.name;
+                document.getElementById('editMajor').value = profile.major;
+                document.getElementById('editYear').value = profile.year;
+                document.getElementById('editBio').value = profile.bio || '';
+                document.getElementById('editSubjects').value = profile.subjects.join(', ');
+
+                // Load ratings
+                const ratingsResponse = await fetch(`${API_URL}/ratings/user/${userId}`);
+                const ratings = await ratingsResponse.json();
+
+                let ratingsHtml = '';
+                if (ratings.length === 0) {
+                    ratingsHtml = '<p style="color: #999;">No ratings yet.</p>';
+                } else {
+                    ratings.forEach(rating => {
+                        ratingsHtml += `
+                            <div style="background: #f9fafb; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                                <p><strong>${rating.from_user_name}</strong> - ⭐ ${rating.rating}/5</p>
+                                <p>${rating.review}</p>
+                                <small style="color: #999;">${new Date(rating.created_at).toLocaleDateString()}</small>
+                            </div>
+                        `;
+                    });
+                }
+
+                document.getElementById('ratingsInfo').innerHTML = ratingsHtml;
+            } catch (error) {
+                console.error('Error loading profile:', error);
+            }
+        }
+
+        function toggleEditForm() {
+            const form = document.getElementById('editForm');
+            const btn = document.getElementById('editBtn');
+
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                btn.textContent = 'Cancel';
+            } else {
+                form.style.display = 'none';
+                btn.textContent = 'Edit Profile';
+            }
+        }
+
+        async function saveProfile() {
+            const userId = localStorage.getItem('user_id');
+            const token = localStorage.getItem('studysync_token');
+
+            const updateData = {
+                name: document.getElementById('editName').value,
+                major: document.getElementById('editMajor').value,
+                year: parseInt(document.getElementById('editYear').value),
+                bio: document.getElementById('editBio').value,
+                subjects: document.getElementById('editSubjects').value.split(',').map(s => s.trim())
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/users/profile/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    toggleEditForm();
+                    loadProfile();
+                } else {
+                    alert('Error updating profile');
+                }
+            } catch (error) {
+                console.error('Error saving profile:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('studysync_token');
+            localStorage.removeItem('user_id');
+            window.location.href = 'index.html';
+        }
+
+        checkAuth();
+        loadProfile();
+    </script>
+</body>
+</html>

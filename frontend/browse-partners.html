@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Partners - StudySync</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <div class="brand">📚 StudySync</div>
+        <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="browse-partners.html">Browse Partners</a></li>
+            <li><a href="my-sessions.html">My Sessions</a></li>
+            <li><a href="profile.html">Profile</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1 style="color: var(--primary); margin-bottom: 2rem;">Browse Study Partners & Sessions</h1>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1rem;">Search Sessions</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                    <input type="text" id="searchSubject" placeholder="Search by subject...">
+                </div>
+                <button class="btn btn-primary" onclick="searchSessions()">Search</button>
+                <button class="btn btn-secondary" onclick="loadAllSessions()">Clear</button>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="card">
+                <h2 class="card-header">Available Sessions</h2>
+                <div id="sessionsList" style="margin-top: 1rem;">
+                    <p style="color: #999;">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-header">Find Study Partners</h2>
+                <div class="form-group">
+                    <input type="text" id="partnerSubject" placeholder="Enter subject..." style="margin: 0;">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="searchPartners()">Search Partners</button>
+                <div id="partnersList" style="margin-top: 1rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Detail Modal -->
+    <div id="sessionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%;
+                                  height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+        <div class="card" style="max-width: 600px; margin: 5% auto; position: relative; z-index: 1001;">
+            <span onclick="closeModal()" style="float: right; cursor: pointer; font-size: 1.5rem;">×</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function checkAuth() {
+            const token = localStorage.getItem('studysync_token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function loadAllSessions() {
+            try {
+                const response = await fetch(`${API_URL}/sessions/all`);
+                const sessions = await response.json();
+                displaySessions(sessions);
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+            }
+        }
+
+        async function searchSessions() {
+            const subject = document.getElementById('searchSubject').value;
+            try {
+                const response = await fetch(`${API_URL}/sessions/all?subject=${subject}`);
+                const sessions = await response.json();
+                displaySessions(sessions);
+            } catch (error) {
+                console.error('Error searching sessions:', error);
+            }
+        }
+
+        function displaySessions(sessions) {
+            let html = '';
+            if (sessions.length === 0) {
+                html = '<p style="color: #999;">No sessions found.</p>';
+            } else {
+                sessions.forEach(session => {
+                    html += `
+                        <div class="session-item" onclick="viewSessionDetail('${session.id}')">
+                            <h3>${session.title}</h3>
+                            <p><strong>${session.subject}</strong></p>
+                            <div class="session-meta">
+                                <span>📅 ${session.date}</span>
+                                <span>⏰ ${session.time}</span>
+                                <span>📍 ${session.location}</span>
+                                <span>${session.participants_count}/${session.max_participants} joined</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('sessionsList').innerHTML = html;
+        }
+
+        async function viewSessionDetail(sessionId) {
+            try {
+                const response = await fetch(`${API_URL}/sessions/${sessionId}`);
+                const session = await response.json();
+
+                let participantsHtml = '<strong>Participants:</strong><ul>';
+                session.participants.forEach(p => {
+                    participantsHtml += `<li>${p.name} (${p.major})</li>`;
+                });
+                participantsHtml += '</ul>';
+
+                document.getElementById('modalContent').innerHTML = `
+                    <h2>${session.title}</h2>
+                    <p>${session.description}</p>
+                    <p><strong>Subject:</strong> ${session.subject}</p>
+                    <p><strong>Date:</strong> ${session.date}</p>
+                    <p><strong>Time:</strong> ${session.time}</p>
+                    <p><strong>Duration:</strong> ${session.duration} minutes</p>
+                    <p><strong>Location:</strong> ${session.location}</p>
+                    <p><strong>Hosted by:</strong> ${session.creator_name}</p>
+                    ${participantsHtml}
+                    <button class="btn btn-primary btn-block" onclick="joinSession('${session.id}')">
+                        Join Session
+                    </button>
+                `;
+
+                document.getElementById('sessionModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading session detail:', error);
+            }
+        }
+
+        async function joinSession(sessionId) {
+            const token = localStorage.getItem('studysync_token');
+            try {
+                const response = await fetch(`${API_URL}/sessions/${sessionId}/join`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Successfully joined session!');
+                    closeModal();
+                    loadAllSessions();
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || 'Error joining session');
+                }
+            } catch (error) {
+                console.error('Error joining session:', error);
+            }
+        }
+
+        async function searchPartners() {
+            const subject = document.getElementById('partnerSubject').value;
+            try {
+                const response = await fetch(`${API_URL}/users/search?subject=${subject}`);
+                const partners = await response.json();
+
+                let html = '';
+                if (partners.length === 0) {
+                    html = '<p style="color: #999;">No partners found for this subject.</p>';
+                } else {
+                    partners.forEach(partner => {
+                        html += `
+                            <div class="card" style="margin: 1rem 0; cursor: pointer;"
+                                 onclick="window.location.href='profile.html?userId=${partner.id}'">
+                                <h4>${partner.name}</h4>
+                                <p><strong>Major:</strong> ${partner.major}</p>
+                                <p><strong>Year:</strong> ${partner.year}</p>
+                                <p><strong>Subjects:</strong> ${partner.subjects.join(', ')}</p>
+                                <p><strong>Rating:</strong> ⭐ ${partner.average_rating}</p>
+                            </div>
+                        `;
+                    });
+                }
+
+                document.getElementById('partnersList').innerHTML = html;
+            } catch (error) {
+                console.error('Error searching partners:', error);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('sessionModal').style.display = 'none';
+        }
+
+        function logout() {
+            localStorage.removeItem('studysync_token');
+            localStorage.removeItem('user_id');
+            window.location.href = 'index.html';
+        }
+
+        checkAuth();
+        loadAllSessions();
+    </script>
+</body>
+</html>

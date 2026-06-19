@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Sessions - StudySync</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <div class="brand">📚 StudySync</div>
+        <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="browse-partners.html">Browse Partners</a></li>
+            <li><a href="my-sessions.html">My Sessions</a></li>
+            <li><a href="profile.html">Profile</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1 style="color: var(--primary); margin-bottom: 2rem;">My Study Sessions</h1>
+
+        <div class="card" style="margin-bottom: 2rem;">
+            <button class="btn btn-primary" onclick="toggleCreateForm()">+ Create New Session</button>
+
+            <div id="createForm" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                <h3 style="color: var(--primary); margin-bottom: 1rem;">Create Study Session</h3>
+
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="sessionTitle">
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="sessionDescription"></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <input type="text" id="sessionSubject">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="sessionDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="sessionTime">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duration (minutes)</label>
+                        <input type="number" id="sessionDuration" value="60">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="sessionLocation" placeholder="e.g., Library Room 101">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Max Participants</label>
+                        <input type="number" id="sessionMaxParticipants" value="5">
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="createSession()" style="width: 100%;">Create Session</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-header">Sessions Hosted by Me</h2>
+            <div id="hostedSessions" style="margin-top: 1rem;">
+                <p style="color: #999;">Loading...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-header">Sessions I'm Participating In</h2>
+            <div id="participatingSessions" style="margin-top: 1rem;">
+                <p style="color: #999;">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function checkAuth() {
+            const token = localStorage.getItem('studysync_token');
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function toggleCreateForm() {
+            const form = document.getElementById('createForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function createSession() {
+            const token = localStorage.getItem('studysync_token');
+
+            const sessionData = {
+                title: document.getElementById('sessionTitle').value,
+                description: document.getElementById('sessionDescription').value,
+                subject: document.getElementById('sessionSubject').value,
+                date: document.getElementById('sessionDate').value,
+                time: document.getElementById('sessionTime').value,
+                duration: parseInt(document.getElementById('sessionDuration').value),
+                location: document.getElementById('sessionLocation').value,
+                max_participants: parseInt(document.getElementById('sessionMaxParticipants').value)
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/sessions/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(sessionData)
+                });
+
+                if (response.ok) {
+                    alert('Session created successfully!');
+                    document.getElementById('createForm').style.display = 'none';
+                    // Reset form
+                    document.querySelectorAll('#createForm input, #createForm textarea').forEach(el => el.value = '');
+                    loadSessions();
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || 'Error creating session');
+                }
+            } catch (error) {
+                console.error('Error creating session:', error);
+            }
+        }
+
+        async function loadSessions() {
+            const userId = localStorage.getItem('user_id');
+
+            try {
+                // Load hosted sessions
+                const hostedResponse = await fetch(`${API_URL}/sessions/user/${userId}/my-sessions`);
+                const hostedSessions = await hostedResponse.json();
+                displayHostedSessions(hostedSessions);
+
+                // Load all sessions and filter for participating
+                const allResponse = await fetch(`${API_URL}/sessions/all?limit=100`);
+                const allSessions = await allResponse.json();
+
+                const participating = allSessions.filter(s => s.creator_id !== userId);
+                displayParticipatingSessions(participating.slice(0, 10));
+            } catch (error) {
+                console.error('Error loading sessions:', error);
+            }
+        }
+
+        function displayHostedSessions(sessions) {
+            let html = '';
+            if (sessions.length === 0) {
+                html = '<p style="color: #999;">You haven\'t hosted any sessions yet.</p>';
+            } else {
+                sessions.forEach(session => {
+                    html += `
+                        <div class="session-item">
+                            <h3>${session.title}</h3>
+                            <div class="session-meta">
+                                <span>📅 ${session.date}</span>
+                                <span>⏰ ${session.time}</span>
+                                <span>${session.participants_count}/${session.max_participants} participants</span>
+                                <span class="badge badge-${session.status === 'active' ? 'success' : 'primary'}">
+                                    ${session.status}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('hostedSessions').innerHTML = html;
+        }
+
+        function displayParticipatingSessions(sessions) {
+            let html = '';
+            if (sessions.length === 0) {
+                html = '<p style="color: #999;">You\'re not participating in any sessions yet.</p>';
+            } else {
+                sessions.forEach(session => {
+                    html += `
+                        <div class="session-item">
+                            <h3>${session.title}</h3>
+                            <p><strong>${session.subject}</strong> hosted by ${session.creator_name}</p>
+                            <div class="session-meta">
+                                <span>📅 ${session.date}</span>
+                                <span>⏰ ${session.time}</span>
+                                <span>📍 ${session.location}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('participatingSessions').innerHTML = html;
+        }
+
+        function logout() {
+            localStorage.removeItem('studysync_token');
+            localStorage.removeItem('user_id');
+            window.location.href = 'index.html';
+        }
+
+        checkAuth();
+        loadSessions();
+    </script>
+</body>
+</html>

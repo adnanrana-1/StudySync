@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySync — Dashboard Portal</title>
+    <style>
+        /* Modern System UI Reset & Variables */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #12161a;
+            color: #f0f2f5;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Navigation Area */
+        .sidebar {
+            width: 260px;
+            background-color: #1a1f26;
+            border-right: 1px solid #2d3540;
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            position: fixed;
+            height: 100vh;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 45px;
+            padding-left: 8px;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: #fff;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #fff, #c9d1d9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            color: #8b949e;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: #2d3540;
+            color: #ffffff;
+        }
+
+        .nav-item.active {
+            background-color: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            font-weight: 600;
+        }
+
+        .logout-section {
+            padding-top: 20px;
+            border-top: 1px solid #2d3540;
+        }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 14px 16px;
+            background: none;
+            border: none;
+            color: #f43f5e;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn-logout:hover {
+            background-color: rgba(244, 63, 94, 0.1);
+        }
+
+        /* Main Dashboard Window Content Container */
+        .main-content {
+            margin-left: 260px;
+            flex-grow: 1;
+            padding: 40px;
+            max-width: 1300px;
+            width: calc(100% - 260px);
+        }
+
+        /* Top Header Navigation Line */
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .welcome-heading h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        .welcome-heading p {
+            color: #8b949e;
+            font-size: 15px;
+        }
+
+        .action-button-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .btn-primary {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background-color: #f59e0b;
+            color: #0d1117;
+        }
+
+        .btn-secondary:hover { opacity: 0.9; }
+
+        /* Summary Analytics Banner Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            border-radius: 14px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-card.purple {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+        }
+
+        .stat-card.gold {
+            background: linear-gradient(135deg, #2b2212, #453315);
+        }
+
+        .stat-card.brown {
+            background: linear-gradient(135deg, #231c18, #3a2a22);
+        }
+
+        .stat-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #9ca3af;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .stat-count {
+            font-size: 44px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .stat-subtitle {
+            font-size: 16px;
+            color: #d1d5db;
+        }
+
+        .rating-stars {
+            color: #fbbf24;
+            font-size: 18px;
+            margin-left: 8px;
+        }
+
+        /* Current Active Work Session Space Grid */
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .sessions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .session-card {
+            background-color: #1a1f26;
+            border: 1px solid #2d3540;
+            border-radius: 14px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 200px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: border-color 0.2s ease;
+        }
+
+        .session-card:hover {
+            border-color: #4f46e5;
+        }
+
+        .session-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .session-tag {
+            font-size: 13px;
+            color: #8b949e;
+            margin-bottom: 18px;
+        }
+
+        .session-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .session-time {
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .btn-join {
+            background-color: #2d3540;
+            color: #ffffff;
+            border: 1px solid #454f5c;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-join:hover {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        /* Accent Card Buttons (matches Join Web Dev) */
+        .session-card.accent-card .btn-join {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .session-card.accent-card .btn-join:hover {
+            background-color: #f59e0b;
+            color: #0d1117;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-container">
+            <div class="logo-icon">🎓</div>
+            <div class="logo-text">StudySync</div>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="/dashboard" class="nav-item active">🎛️ Dashboard</a>
+            <a href="#" class="nav-item">👤 Profile</a>
+            <a href="#" class="nav-item">⚙️ Settings</a>
+        </nav>
+
+        <div class="logout-section">
+            <button class="btn-logout" id="logoutBtn">🚪 Disconnect</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+
+        <div class="header-actions">
+            <div class="welcome-heading">
+                <h1 id="welcomeUser">Good Afternoon, User!</h1>
+                <p>Welcome to StudySync ~ your dashboard workspace hub.</p>
+            </div>
+            <div class="action-button-group">
+                <button class="btn-primary">🔍 Find Study Groups</button>
+                <button class="btn-secondary">➕ Create Session</button>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="stat-card purple">
+                <div class="stat-title">Active Sessions</div>
+                <div class="stat-count">5</div>
+                <div class="stat-subtitle">105 total platform units</div>
+            </div>
+
+            <div class="stat-card gold">
+                <div class="stat-title">Ratings</div>
+                <div class="stat-count">4.0<span class="rating-stars">★★★★★</span></div>
+                <div class="stat-subtitle">Peer feedback metrics</div>
+            </div>
+
+            <div class="stat-card brown">
+                <div class="stat-title">Study Hours</div>
+                <div class="stat-count">4:8h</div>
+                <div class="stat-subtitle">Active metrics: 15m this week</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Current Study Sessions</h2>
+
+        <div class="sessions-grid">
+            <div class="session-card">
+                <div class="session-header">
+                    <h3>Study's Session 1</h3>
+                    <p class="session-tag">Session Study</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">13 days 1 hour ago</span>
+                    <button class="btn-join">Join Web Dev</button>
+                </div>
+            </div>
+
+            <div class="session-card">
+                <div class="session-header">
+                    <h3>Analyst Session</h3>
+                    <p class="session-tag">Session Study</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">13 days 1 hour ago</span>
+                    <button class="btn-join">Join Web Dev</button>
+                </div>
+            </div>
+
+            <div class="session-card accent-card">
+                <div class="session-header">
+                    <h3>Join Web Dev</h3>
+                    <p class="session-tag">Session Study</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">12 days 1 hour ago</span>
+                    <button class="btn-join">Join Web Dev</button>
+                </div>
+            </div>
+
+            <div class="session-card">
+                <div class="session-header">
+                    <h3>Study's Session 3</h3>
+                    <p class="session-tag">10:00 - 11:00</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">13 days 1 hour ago</span>
+                    <button class="btn-join">Join</button>
+                </div>
+            </div>
+
+            <div class="session-card">
+                <div class="session-header">
+                    <h3>Session Practice 1</h3>
+                    <p class="session-tag">10:00 - 11:00</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">13 days 1 hour ago</span>
+                    <button class="btn-join">Join</button>
+                </div>
+            </div>
+
+            <div class="session-card">
+                <div class="session-header">
+                    <h3>Session 1 Dev</h3>
+                    <p class="session-tag">10:00 - 11:00</p>
+                </div>
+                <div class="session-footer">
+                    <span class="session-time">13 days 1 hour ago</span>
+                    <button class="btn-join">Join</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Dynamically fetch and greet the user using state names cached on login
+        const loggedInUser = localStorage.getItem('username') || "Adnan";
+        document.getElementById('welcomeUser').innerText = `Good Afternoon, ${loggedInUser}!`;
+
+        // Clear tokens cleanly upon disconnect selection
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
